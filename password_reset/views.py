@@ -1,7 +1,7 @@
 import datetime
 
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.sites.models import RequestSite
 from django.core import signing
 from django.core.mail import send_mail
@@ -107,6 +107,7 @@ class Reset(SaltMixin, generic.FormView):
     success_url = reverse_lazy('password_reset_done')
 
     def dispatch(self, request, *args, **kwargs):
+        user_model = get_user_model()
         self.request = request
         self.args = args
         self.kwargs = kwargs
@@ -117,7 +118,7 @@ class Reset(SaltMixin, generic.FormView):
         except signing.BadSignature:
             return self.invalid()
 
-        self.user = get_object_or_404(User, pk=pk)
+        self.user = get_object_or_404(user_model, pk=pk)
         return super(Reset, self).dispatch(request, *args, **kwargs)
 
     def invalid(self):
