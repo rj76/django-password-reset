@@ -1,5 +1,5 @@
 from django import forms
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.core.validators import validate_email
 from django.db.models import Q
 from django.utils.translation import ugettext_lazy as _
@@ -15,6 +15,7 @@ class PasswordRecoveryForm(forms.Form):
 
         message = ("No other fields than username and email are supported "
                    "by default")
+
         if len(search_fields) not in (1, 2):
             raise ValueError(message)
         for field in search_fields:
@@ -39,32 +40,35 @@ class PasswordRecoveryForm(forms.Form):
         return username
 
     def get_user_by_username(self, username):
+        user_model = get_user_model()
         key = 'username__%sexact' % ('' if self.case_sensitive else 'i')
         try:
-            user = User.objects.get(**{key: username})
-        except User.DoesNotExist:
+            user = user_model.objects.get(**{key: username})
+        except user_model.DoesNotExist:
             raise forms.ValidationError(_("Sorry, this user doesn't exist."))
         return user
 
     def get_user_by_email(self, email):
+        user_model = get_user_model()
         validate_email(email)
         key = 'email__%sexact' % ('' if self.case_sensitive else 'i')
         try:
-            user = User.objects.get(**{key: email})
-        except User.DoesNotExist:
+            user = user_model.objects.get(**{key: email})
+        except user_model.DoesNotExist:
             raise forms.ValidationError(_("Sorry, this user doesn't exist."))
         return user
 
     def get_user_by_both(self, username):
+        user_model = get_user_model()
         key = '__%sexact'
         key = key % '' if self.case_sensitive else key % 'i'
         f = lambda field: Q(**{field + key: username})
         filters = f('username') | f('email')
         try:
-            user = User.objects.get(filters)
-        except User.DoesNotExist:
+            user = user_model.objects.get(filters)
+        except user_model.DoesNotExist:
             raise forms.ValidationError(_("Sorry, this user doesn't exist."))
-        except User.MultipleObjectsReturned:
+        except user_model.MultipleObjectsReturned:
             raise forms.ValidationError(_("Unable to find user."))
         return user
 
@@ -91,7 +95,8 @@ class PasswordResetForm(forms.Form):
         return password2
 
     def save(self):
+        user_model = get_user_model()
         self.user.set_password(self.cleaned_data['password1'])
-        User.objects.filter(pk=self.user.pk).update(
+        user_model.objects.filter(pk=self.user.pk).update(
             password=self.user.password,
         )
